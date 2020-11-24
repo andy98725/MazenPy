@@ -44,7 +44,25 @@ class MazeDisp:
                         
                         
                         
+    def AILoop(self, AI):
+        self.update()
+        
+        while self.running:
+            for event in pygame.event.get():
+                # User clicked X
+                if event.type == pygame.QUIT:
+                    self.quit()
+                    
+                # Handle button inputs
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.quit()
+                    # Soft quit
+                    elif event.key == pygame.K_SPACE:
+                        self.running = False
             
+            # AI nav
+            self.maze.pilot(AI, self)
             
     # Redraw self
     def update(self):
