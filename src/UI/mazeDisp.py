@@ -44,7 +44,7 @@ class MazeDisp:
                         
                         
                         
-    def AILoop(self, AI):
+    def AILoop(self, AI, pause=0.5):
         self.update()
         
         while self.running:
@@ -62,7 +62,10 @@ class MazeDisp:
                         self.running = False
             
             # AI nav
-            self.maze.pilot(AI, self)
+            self.maze.pilot(AI, self, pause)
+            
+            if self.maze.isFinished():
+                self.quit()
             
     # Redraw self
     def update(self):

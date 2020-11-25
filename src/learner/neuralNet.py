@@ -11,7 +11,7 @@ import learner.activations as acts
 
 class NeuralNet:
 
-    def __init__(self, inputNodes, outputNodes, hiddenNodes, hiddenLayers, activationFunction=acts.sigmoid, activationDer=acts.sigmoidDer):
+    def __init__(self, inputNodes, outputNodes, hiddenNodes, hiddenLayers, activationFunction=acts.reLu, activationDer=acts.reLuDer):
         self.activation = activationFunction
         self.activationDer = activationDer
         # Construct an array of weights at each layer
@@ -40,11 +40,6 @@ class NeuralNet:
                 inp = self.activation(inp)    
         return inp
     
-    # Take a np array input and return which neuron has the highest value
-    def argmaxEval(self, inp):
-        evalArr = self.eval(inp)
-        return np.argmax(evalArr)
-        
     def __backpropInitialize(self):
         self.weightDelta = []
         for i in range(len(self.weights)):

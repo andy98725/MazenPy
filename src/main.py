@@ -1,14 +1,18 @@
 from sim.maze import Maze, MAZE_SIZE
 from UI.mazeDisp import MazeDisp
 from learner.neuralNet import NeuralNet
+from learner.QLearn import QLearn
 
 from os import path
 import pickle
 
 def main():
     AILoop()
-    
+    print("Goodbye.")
+
+# Train AI to interact with maze    
 def AILoop(filename=None, iters = -1, save = False):
+    # Load AI
     if filename == None:
         AI = newAI()
     elif not path.exists(filename):
@@ -17,11 +21,19 @@ def AILoop(filename=None, iters = -1, save = False):
     else:
         AI = readFromFile(filename)
         
+    # Main loop
     while iters != 0:
-        MazeDisp(Maze()).AILoop(AI)
+        # Train AI on some mazes
+        QLearn(AI)
+        
+        # Show progress briefly
+        MazeDisp(Maze(maxTraversals=8)).AILoop(AI)
+        
+        # Decrement
         if iters > 0:
             iters -= 1
-        
+    
+    # Save AI
     if save:
         writeToFile(AI, filename)
 
@@ -29,8 +41,8 @@ def AILoop(filename=None, iters = -1, save = False):
 def newAI():
     inputSize = 2 + MAZE_SIZE * MAZE_SIZE  # 256 for visited nodes, 2 for location
     outputSize = 4
-    hiddenSize = 128
-    hiddenLayers = 4
+    hiddenSize =  MAZE_SIZE * MAZE_SIZE
+    hiddenLayers = 3
     
     print("Generating new AI...")
     return NeuralNet(inputSize, outputSize, hiddenSize, hiddenLayers)

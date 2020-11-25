@@ -26,7 +26,10 @@ class Tile:
         self.right = False
         self.start = isStart
         self.end = isEnd
+        # To be calculated
+        self.distance = -1
         self.neighborCount = 0
+        self.reward = -1
     
     def link(self, other):
         self.neighborCount += 1
@@ -98,9 +101,9 @@ class Tile:
         if not self.left:
             pygame.draw.rect(screen, COL_WALL, (tlx - WALL_SIZE / 2, tly - WALL_SIZE / 2, WALL_SIZE, PX_SIZE + WALL_SIZE))
         if not self.down:
-            pygame.draw.rect(screen, COL_WALL, (tlx - WALL_SIZE/2, tly + PX_SIZE - WALL_SIZE/2, PX_SIZE+WALL_SIZE, WALL_SIZE))
+            pygame.draw.rect(screen, COL_WALL, (tlx - WALL_SIZE / 2, tly + PX_SIZE - WALL_SIZE / 2, PX_SIZE + WALL_SIZE, WALL_SIZE))
         if not self.right:
-            pygame.draw.rect(screen, COL_WALL, (tlx + PX_SIZE - WALL_SIZE/2, tly-WALL_SIZE/2, WALL_SIZE, PX_SIZE+WALL_SIZE))
+            pygame.draw.rect(screen, COL_WALL, (tlx + PX_SIZE - WALL_SIZE / 2, tly - WALL_SIZE / 2, WALL_SIZE, PX_SIZE + WALL_SIZE))
 
 
 # Generate maze
@@ -112,12 +115,50 @@ def genMap(size):
     
     # Maze generation can work as a randomized DFS
     DFS(size, tilemap, start, end, start)
+    
+    # Maze is a tree rooted from the end directory. Find the distance for each tile
+    maxDist = setDistances(tilemap, end)
+
+    # Reward the algorithm for getting closer to destination    
+    for tileRow in tilemap:
+        for tile in tileRow:
+            tile.reward = 1 - (tile.distance / maxDist)
+    
     return tilemap
 
 
+def setDistances(tilemap, loc, distance=0):
+    x, y = loc
+    tile = tilemap[x][y]
+    # Ensure no repeats
+    if tile.distance >= 0:
+        return -1
+    
+    tile.distance = distance
+    maxDist = distance
+    distance += 1
+    
+    # Find neighbor cases
+    recursiveCases = []
+    if tile.up:
+        recursiveCases.append((x, y - 1))
+    if tile.down: 
+        recursiveCases.append((x, y + 1))
+    if tile.left:
+        recursiveCases.append((x - 1, y))
+    if tile.right:
+        recursiveCases.append((x + 1, y))
+    
+    for nextLoc in recursiveCases:
+        maxDist = max(maxDist, setDistances(tilemap, nextLoc, distance))
+    
+    return maxDist
+
+
 def DFS(size, tilemap, startLoc, endLoc, loc, prevTile=None):
-    x = loc[0]
-    y = loc[1]
+#     x = loc[0]
+#     y = loc[1]
+    x, y = loc
     isStart = loc == startLoc
     isEnd = loc == endLoc
     tile = tilemap[x][y] = Tile(x, y, isStart, isEnd)
@@ -144,4 +185,3 @@ def DFS(size, tilemap, startLoc, endLoc, loc, prevTile=None):
     for nextLoc in recursiveCases:
         if tilemap[nextLoc[0]][nextLoc[1]] == None:
             DFS(size, tilemap, startLoc, endLoc, nextLoc, tile)
-    
