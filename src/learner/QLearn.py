@@ -22,7 +22,7 @@ def Test(model, mazeCount=32, maxIters=64):
     print("AI solved {} out of {} mazes in {} avg steps".format(totalSolved, mazeCount, totalSteps / totalSolved if totalSolved > 0 else "-"))
 
 
-def QLearn(model, mazeCount=16, maxIters=12, exploreRate=0.1, learningRate=0.001, learningIters=10):
+def QLearn(model, mazeCount, maxIters, exploreRate, learningRate, learningIters):
     print("Training AI on {} mazes, {} max steps with explore rate {}".format(mazeCount, maxIters, exploreRate))
     print("Using learning rate {} and {} GD iters at each step".format(learningRate, learningIters))
     
@@ -33,7 +33,9 @@ def QLearn(model, mazeCount=16, maxIters=12, exploreRate=0.1, learningRate=0.001
         maze = Maze(maxTraversals=maxIters)
         goodActs = 0
         badActs = 0
-        dist = maze.currentTile().distance
+        invalidActs = 0
+        minDist = maze.currentTile().distance
+        prevDist = minDist
         
         while not maze.isFinished():
             # Get action according to exploration rate
@@ -50,24 +52,27 @@ def QLearn(model, mazeCount=16, maxIters=12, exploreRate=0.1, learningRate=0.001
             
             # Track actions
             newDist = maze.currentTile().distance
-            if newDist < dist:
+            if newDist < minDist:
                 goodActs += 1
+                minDist = newDist
+            elif newDist == prevDist:
+                invalidActs += 1
             else:
                 badActs += 1
-            dist = newDist
+                
+            prevDist = newDist
             
             # Store info in memory
             memory.append(curState, REVERSE_NNDIRS.get(act), reward, nextState, maze.isFinished())
             
             # Learn from current memory state
             model.backprop(memory.getTrainingData(model), learningRate, learningIters)
-        
-        print("({} seconds) Maze {} finished with {} good actions, {} bad actions, {} tiles away from exit".format(round(time.time() - startTime, 1), i + 1, goodActs, badActs , maze.getDistance()))
+        print("({} seconds) Maze {} finished with {} good, {} bad, {} invalid actions, {} tiles away".format(round(time.time() - startTime, 1), i + 1, goodActs, badActs, invalidActs, maze.getDistance()))
 
 
 class QLearnMem:
 
-    def __init__(self, memSize=10, discount=0.95):
+    def __init__(self, memSize=100, discount=1):
         self.size = memSize
         self.discount = discount
         self.memory = []

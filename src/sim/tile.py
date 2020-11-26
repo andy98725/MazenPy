@@ -64,7 +64,7 @@ class Tile:
     
     def isHallway(self):
         return self.neighborCount == 2
-    def isDeadEnd(self):
+    def deadEnd(self):
         return not self.end and not self.start and self.neighborCount == 1
     
     def setVisited(self, visited):
@@ -88,7 +88,7 @@ class Tile:
         pygame.draw.rect(screen, bgcol, (tlx, tly, PX_SIZE, PX_SIZE))
         
     # Display this tile's walls to screen
-    def drawWalls(self, screen, currentLoc=None):
+    def drawWalls(self, screen):
         tlx = self.x * PX_SIZE
         tly = self.y * PX_SIZE
         
@@ -106,12 +106,14 @@ class Tile:
 def copyMap(tilemap):
     wid = len(tilemap)
     hei = len(tilemap[0])
-    # Randomize start location
-    startX = np.random.randint(wid)
-    startY = np.random.randint(hei)
-    if tilemap[startX][startY].end:
-        startX = 0
-        startY = 0
+#     # Randomize start location
+#     startX = np.random.randint(wid)
+#     startY = np.random.randint(hei)
+#     if tilemap[startX][startY].end:
+#         startX = 0
+#         startY = 0
+    startX = 0
+    startY = 0
     
     # Make fresh maze with randomized start
     newmap = [[None for _ in range(hei)] for _ in range(wid)]

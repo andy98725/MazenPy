@@ -20,7 +20,7 @@ DEF_MAP = tile.genMap(MAZE_SIZE)
 
 class Maze:
     
-    def __init__(self, autoTraverse=True, autoTraverseDelay=0, maxTraversals=-1, allowBacktracking=False):
+    def __init__(self, autoTraverse=False, autoTraverseDelay=0, maxTraversals=-1, allowBacktracking=True):
         self.size = MAZE_SIZE
         self.autoTraverse = autoTraverse
         self.autoTraverseDelay = autoTraverseDelay
@@ -80,13 +80,14 @@ class Maze:
         if not recursive:
             self.traversals += 1
         if not d in self.getCurrentDirections():
-#             self.action = 'invalid'
+            # Store self state for training
+            self.state = 'invalid'
             return -1
         if not self.traverseReady:
             return -2
         if self.isFinished():
             return 0
-#         self.action = 'valid'  # Store validity state for training
+        self.state = 'valid'
         
         self.traverseReady = False
         prevTile = self.currentTile()
@@ -122,15 +123,17 @@ class Maze:
         return dirs[0]
     
     def getAIDir(self, model):
-        # Find highest validated direction
-        validDirs = self.getCurrentDirections()
+#         # Find highest validated direction
+#         validDirs = self.getCurrentDirections()
+        # Find highest direction
         e = model.eval(self.getNNState())
         maxVal = -1
         maxDir = 0
         
         for i in range(len(e)):
             d = NNDIRS.get(i)
-            if d in validDirs and e[i] > maxVal:
+#             if d in validDirs and e[i] > maxVal:
+            if e[i] > maxVal:
                 maxDir = d
                 maxVal = e[i]
         return maxDir
@@ -162,16 +165,18 @@ class Maze:
     # Get reward for current state
     def getReward(self):
         if self.success():
-            return 1.0
-        if self.failure():
-            return -1.0
-        return -0.05
-#         if self.isFinished():
-#             return self.currentTile().reward
-#         if self.action == 'invalid':
-#             return -0.4
-        # Get distance from finishing
-#         return self.currentTile().reward
+            return 100.0
+        # Dead end
+        if self.currentTile().deadEnd():
+            return -100.0
+        # Illegal move
+        if self.state == 'invalid':
+            return -0.5
+        # Backwards move
+        if self.currentTile().visited:
+            return -0.25
+        # Incentivize progres
+        return -0.04
     
     def getDistance(self):
         return self.currentTile().distance

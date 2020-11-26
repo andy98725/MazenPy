@@ -78,7 +78,7 @@ class MazeDisp:
         for tile in self.maze.tilesFlat:
             tile.drawBG(self.screen, self.maze.loc)
         for tile in self.maze.tilesFlat:
-            tile.drawWalls(self.screen, self.maze.loc)
+            tile.drawWalls(self.screen)
             
         pygame.display.update()
     
