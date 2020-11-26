@@ -1,5 +1,6 @@
 import random
 import pygame
+import numpy as np
 
 from sim import maze
 
@@ -30,6 +31,18 @@ class Tile:
         self.distance = -1
         self.neighborCount = 0
         self.reward = -1
+        
+    # Similar to copy constructor
+    def copy(self, tile):
+        self.up = tile.up
+        self.down = tile.down
+        self.left = tile.left
+        self.right = tile.right
+        self.end = tile.end
+        self.distance = tile.distance
+        self.neighborCount = tile.neighborCount
+        self.reward = tile.reward
+        
     
     def link(self, other):
         self.neighborCount += 1
@@ -51,27 +64,11 @@ class Tile:
     
     def isHallway(self):
         return self.neighborCount == 2
+    def isDeadEnd(self):
+        return not self.end and not self.start and self.neighborCount == 1
     
     def setVisited(self, visited):
         self.visited = visited
-        
-    def getDirections(self):
-        dirs = []
-        if self.up:
-            dirs.append(maze.D_UP)
-        if self.down:
-            dirs.append(maze.D_DOWN)
-        if self.left:
-            dirs.append(maze.D_LEFT)
-        if self.right:
-            dirs.append(maze.D_RIGHT)
-        
-        return dirs
-        
-    def getOtherDirection(self, d):
-        dirs = self.getDirections()
-        dirs.remove(d)
-        return dirs[0]
         
     # Display the background to screen
     def drawBG(self, screen, currentLoc=None):
@@ -105,6 +102,25 @@ class Tile:
         if not self.right:
             pygame.draw.rect(screen, COL_WALL, (tlx + PX_SIZE - WALL_SIZE / 2, tly - WALL_SIZE / 2, WALL_SIZE, PX_SIZE + WALL_SIZE))
 
+# Copy existing maze layout
+def copyMap(tilemap):
+    wid = len(tilemap)
+    hei = len(tilemap[0])
+    # Randomize start location
+    startX = np.random.randint(wid)
+    startY = np.random.randint(hei)
+    if tilemap[startX][startY].end:
+        startX = 0
+        startY = 0
+    
+    # Make fresh maze with randomized start
+    newmap = [[None for _ in range(hei)] for _ in range(wid)]
+    for i in range(wid):
+        for j in range(hei):
+            newmap[i][j] = Tile(i,j, False, False)
+            newmap[i][j].copy(tilemap[i][j])
+            newmap[i][j].start = i == startX and j == startY
+    return newmap
 
 # Generate maze
 def genMap(size):
@@ -125,6 +141,38 @@ def genMap(size):
             tile.reward = 1 - (tile.distance / maxDist)
     
     return tilemap
+
+
+def DFS(size, tilemap, startLoc, endLoc, loc, prevTile=None):
+#     x = loc[0]
+#     y = loc[1]
+    x, y = loc
+    isStart = loc == startLoc
+    isEnd = loc == endLoc
+    tile = tilemap[x][y] = Tile(x, y, isStart, isEnd)
+    if prevTile != None:
+        prevTile.link(tile)
+        
+    # Force end hallway on end tile
+    if isEnd:
+        return
+    
+    # Find cases to search
+    recursiveCases = []
+    if y > 0 and tilemap[x][y - 1] == None:
+        recursiveCases.append((x, y - 1)) 
+    if y < size - 1 and tilemap[x][y + 1] == None:
+        recursiveCases.append((x, y + 1))
+    if x > 0 and tilemap[x - 1][y] == None:
+        recursiveCases.append((x - 1, y)) 
+    if x < size - 1 and tilemap[x + 1][y] == None:
+        recursiveCases.append((x + 1, y))
+    # Ensure random ordering for randomized paths  
+    random.shuffle(recursiveCases)
+    
+    for nextLoc in recursiveCases:
+        if tilemap[nextLoc[0]][nextLoc[1]] == None:
+            DFS(size, tilemap, startLoc, endLoc, nextLoc, tile)
 
 
 def setDistances(tilemap, loc, distance=0):
@@ -153,35 +201,3 @@ def setDistances(tilemap, loc, distance=0):
         maxDist = max(maxDist, setDistances(tilemap, nextLoc, distance))
     
     return maxDist
-
-
-def DFS(size, tilemap, startLoc, endLoc, loc, prevTile=None):
-#     x = loc[0]
-#     y = loc[1]
-    x, y = loc
-    isStart = loc == startLoc
-    isEnd = loc == endLoc
-    tile = tilemap[x][y] = Tile(x, y, isStart, isEnd)
-    if prevTile != None:
-        tile.link(prevTile)
-        
-    # Force end hallway on end tile
-    if isEnd:
-        return
-    
-    # Find cases to search
-    recursiveCases = []
-    if y > 0 and tilemap[x][y - 1] == None:
-        recursiveCases.append((x, y - 1)) 
-    if y < size - 1 and tilemap[x][y + 1] == None:
-        recursiveCases.append((x, y + 1))
-    if x > 0 and tilemap[x - 1][y] == None:
-        recursiveCases.append((x - 1, y)) 
-    if x < size - 1 and tilemap[x + 1][y] == None:
-        recursiveCases.append((x + 1, y))
-    # Ensure random ordering for randomized paths  
-    random.shuffle(recursiveCases)
-    
-    for nextLoc in recursiveCases:
-        if tilemap[nextLoc[0]][nextLoc[1]] == None:
-            DFS(size, tilemap, startLoc, endLoc, nextLoc, tile)

@@ -1,6 +1,7 @@
-from sim import tile
-import numpy as np
 import time
+
+import numpy as np
+from sim import tile
 
 D_UP = 1
 D_DOWN = -1
@@ -13,50 +14,72 @@ DIRNAMES = {D_UP : "Up", D_LEFT: "Left", D_DOWN: "Down", D_RIGHT: "Right"}
 
 MAZE_SIZE = 16
 
+# Default/consistent maze
+DEF_MAP = tile.genMap(MAZE_SIZE)
+
 
 class Maze:
     
-    def __init__(self, autoTraverse=True, autoTraverseDelay=0, maxTraversals=-1):
+    def __init__(self, autoTraverse=True, autoTraverseDelay=0, maxTraversals=-1, allowBacktracking=False):
         self.size = MAZE_SIZE
         self.autoTraverse = autoTraverse
         self.autoTraverseDelay = autoTraverseDelay
         self.maxTraversals = maxTraversals
         self.traversals = 0
+        self.allowBacktracking = allowBacktracking
         
-        self.tiles = tile.genMap(self.size)
+#         self.tiles = tile.genMap(self.size, allowBacktracking)
+        self.tiles = tile.copyMap(DEF_MAP)
         self.tilesFlat = flatten(self.tiles)
         
-        self.currentLoc = (0, 0)
+        self.loc = self.startLoc()
         self.traverseReady = True
+    
+    def startLoc(self):
+        for t in self.tilesFlat:
+            if t.start:
+                return (t.x, t.y)
         
     def currentTile(self):
-        return self.tiles[self.currentLoc[0]][self.currentLoc[1]]
+        return self.tiles[self.loc[0]][self.loc[1]]
 
     def isFinished(self):
-        return self.success() or (self.maxTraversals > 0 and self.traversals >= self.maxTraversals)
-    
+        return self.success() or self.failure() or self.timeOut()
+
     def success(self):
         return self.currentTile().end
+
+    def failure(self):
+        return not self.allowBacktracking and len(self.getCurrentDirections()) == 0 and not self.success()
+
+    def timeOut(self):
+        return self.maxTraversals > 0 and self.traversals >= self.maxTraversals
         
     def getCurrentDirections(self):
         # Get current tile occupied
         tile = self.currentTile()
         
         dirs = []
-        if tile.up:
+        if tile.up and (self.allowBacktracking or not self.tiles[self.loc[0]][self.loc[1] - 1].visited):
             dirs.append(D_UP)
-        if tile.down:
+        if tile.down and (self.allowBacktracking or not self.tiles[self.loc[0]][self.loc[1] + 1].visited):
             dirs.append(D_DOWN)
-        if tile.left:
+        if tile.left and (self.allowBacktracking or not self.tiles[self.loc[0] - 1][self.loc[1]].visited):
             dirs.append(D_LEFT)
-        if tile.right:
+        if tile.right and (self.allowBacktracking or not self.tiles[self.loc[0] + 1][self.loc[1]].visited):
             dirs.append(D_RIGHT)
         return dirs        
+    
+    def getOtherDirection(self, d):
+        dirs = self.getCurrentDirections()
+        if d in dirs:
+            dirs.remove(d)
+        return dirs[0]
     
     def traverse(self, d, disp=None, recursive=False):
         if not recursive:
             self.traversals += 1
-        if not self.getCurrentDirections().__contains__(d):
+        if not d in self.getCurrentDirections():
 #             self.action = 'invalid'
             return -1
         if not self.traverseReady:
@@ -68,13 +91,13 @@ class Maze:
         self.traverseReady = False
         prevTile = self.currentTile()
         if d == D_UP:
-            self.currentLoc = (self.currentLoc[0], self.currentLoc[1] - 1)
+            self.loc = (self.loc[0], self.loc[1] - 1)
         elif d == D_DOWN:
-            self.currentLoc = (self.currentLoc[0], self.currentLoc[1] + 1)
+            self.loc = (self.loc[0], self.loc[1] + 1)
         elif d == D_LEFT:
-            self.currentLoc = (self.currentLoc[0] - 1, self.currentLoc[1])
+            self.loc = (self.loc[0] - 1, self.loc[1])
         elif d == D_RIGHT:
-            self.currentLoc = (self.currentLoc[0] + 1, self.currentLoc[1])
+            self.loc = (self.loc[0] + 1, self.loc[1])
         else:
             raise Exception("Bad traversal call: d {}".format(d))
         
@@ -87,23 +110,23 @@ class Maze:
                 time.sleep(self.autoTraverseDelay)
                 
             self.traverseReady = True
-            return self.traverse(self.currentTile().getOtherDirection(-d), disp, True)
+            return self.traverse(self.getOtherDirection(-d), disp, True)
         
         else:
             self.traverseReady = True
             return 0
         
     def getRandomDir(self):
-        dirs = self.currentTile().getDirections()
+        dirs = self.getCurrentDirections()
         np.random.shuffle(dirs)
         return dirs[0]
     
     def getAIDir(self, model):
         # Find highest validated direction
-        validDirs = self.currentTile().getDirections()
+        validDirs = self.getCurrentDirections()
         e = model.eval(self.getNNState())
-        maxVal = 0
-        maxDir = -1
+        maxVal = -1
+        maxDir = 0
         
         for i in range(len(e)):
             d = NNDIRS.get(i)
@@ -114,40 +137,39 @@ class Maze:
         
     def pilot(self, model, disp=None, pauseTime=0):
         d = self.getAIDir(model)
+#         print(DIRNAMES.get(d))
         
         # Delay
         if pauseTime > 0:
             time.sleep(pauseTime)
         
-#         print("Input {}".format(self.getNNState()))
-#         print("True output {}".format(model.eval(self.getNNState())))
-#         print("Chose dir {}".format(DIRNAMES.get(d)))    
         self.traverse(d, disp)
 
     # Get NNet input in np array format
     def getNNState(self):
         inp = []
         
-        # (0-255): Has the tile been reached? (Y/N)
         for tile in self.tilesFlat:
-            if tile.visited:
+            if tile == self.currentTile():
                 inp.append(1)
+#             elif tile.visited:
+#                 inp.append(-1)
             else:
                 inp.append(0)
-        
-        # (256, 257): Current location in maze
-        inp.append(self.currentLoc[0])
-        inp.append(self.currentLoc[1])
         
         return inp
     
     # Get reward for current state
-    def getReward(self, force=False):
+    def getReward(self):
         if self.success():
             return 1.0
+        if self.failure():
+            return -1.0
         return -0.05
-#         if self.action == 'invalid' and not force:
-#             return -1.0
+#         if self.isFinished():
+#             return self.currentTile().reward
+#         if self.action == 'invalid':
+#             return -0.4
         # Get distance from finishing
 #         return self.currentTile().reward
     

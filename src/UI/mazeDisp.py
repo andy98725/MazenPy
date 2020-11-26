@@ -6,6 +6,7 @@ pygame.init()
 
 
 class MazeDisp:
+
     def __init__(self, maze):
         self.maze = maze
         self.size = tile.PX_SIZE * maze.size
@@ -13,7 +14,6 @@ class MazeDisp:
         self.running = True
         
         maze.autoTraverseDelay = 0.02
-
 
     # Draw self and scan for events
     def displayLoop(self):
@@ -42,21 +42,21 @@ class MazeDisp:
                     elif event.key == pygame.K_DOWN:
                         self.maze.traverse(maze.D_DOWN, self)
                         
+        pygame.quit()
                         
-                        
-    def AILoop(self, AI, pause=0.5):
+    def AILoop(self, AI, pause=0.5, filename=None):
         self.update()
         
         while self.running:
             for event in pygame.event.get():
                 # User clicked X
                 if event.type == pygame.QUIT:
-                    self.quit()
+                    self.running = False
                     
                 # Handle button inputs
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.quit()
+                        self.running = False
                     # Soft quit
                     elif event.key == pygame.K_SPACE:
                         self.running = False
@@ -65,14 +65,20 @@ class MazeDisp:
             self.maze.pilot(AI, self, pause)
             
             if self.maze.isFinished():
-                self.quit()
+                self.running = False
+        
+        # Save final state
+        if filename != None:
+            pygame.image.save(self.screen, filename)
             
+        pygame.quit()
+        
     # Redraw self
     def update(self):
         for tile in self.maze.tilesFlat:
-            tile.drawBG(self.screen, self.maze.currentLoc)
+            tile.drawBG(self.screen, self.maze.loc)
         for tile in self.maze.tilesFlat:
-            tile.drawWalls(self.screen, self.maze.currentLoc)
+            tile.drawWalls(self.screen, self.maze.loc)
             
         pygame.display.update()
     
