@@ -44,33 +44,36 @@ class MazeDisp:
                         
         pygame.quit()
                         
-    def AILoop(self, AI, pause=0.5, filename=None):
+    def AILoop(self, AI, pause=0.5, filename=None, runAI=False):
+        self.maze.evalModelSuccessStates(AI)
         self.update()
-        
-        while self.running:
-            for event in pygame.event.get():
-                # User clicked X
-                if event.type == pygame.QUIT:
-                    self.running = False
-                    
-                # Handle button inputs
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        self.running = False
-                    # Soft quit
-                    elif event.key == pygame.K_SPACE:
-                        self.running = False
-            
-            # AI nav
-            self.maze.pilot(AI, self, pause)
-            
-            if self.maze.isFinished():
-                self.running = False
-        
-        # Save final state
+        self.maze.clearModelSuccessStates()
+        # Save heatmap
         if filename != None:
             pygame.image.save(self.screen, filename)
-            
+        
+        if runAI:
+            self.update()
+            while self.running:
+                for event in pygame.event.get():
+                    # User clicked X
+                    if event.type == pygame.QUIT:
+                        self.running = False
+                        
+                    # Handle button inputs
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            self.running = False
+                        # Soft quit
+                        elif event.key == pygame.K_SPACE:
+                            self.running = False
+                
+                # AI nav
+                self.maze.pilot(AI, self, pause)
+                
+                if self.maze.isFinished():
+                    self.running = False
+        
         pygame.quit()
         
     # Redraw self

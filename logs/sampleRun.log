@@ -1,0 +1,127 @@
+Maze size 8.
+max steps per iteration = maze diam
+
+Algorithm does very well for solving the maze, although not completely.
+
+======================
+
+pygame 2.0.0 (SDL 2.0.12, python 3.6.4)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+File Med.dict does not exist yet.
+Generating new AI...
+File Med.maze does not exist yet.
+Generating new maze...
+
+ITERATION 1
+
+AI solved 0 out of 32 mazes in - avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.4 sec) Final MSE 4.513444588367319e-07
+
+ITERATION 2
+
+AI solved 4 out of 32 mazes in 3.25 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.4 sec) Final MSE 2.510375954362148e-13
+
+ITERATION 3
+
+AI solved 6 out of 32 mazes in 4.5 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.4 sec) Final MSE 2.4897144237606273e-17
+
+ITERATION 4
+
+AI solved 12 out of 32 mazes in 6.166666666666667 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.3 sec) Final MSE 0.0
+
+ITERATION 5
+
+AI solved 22 out of 32 mazes in 9.727272727272727 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.2 sec) Final MSE 0.0
+
+ITERATION 6
+
+AI solved 18 out of 32 mazes in 8.38888888888889 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.2 sec) Final MSE 0.0
+
+ITERATION 7
+
+AI solved 23 out of 32 mazes in 10.304347826086957 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.2 sec) Final MSE 0.0
+
+ITERATION 8
+
+AI solved 25 out of 32 mazes in 10.68 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.2 sec) Final MSE 0.0
+
+ITERATION 9
+
+AI solved 28 out of 32 mazes in 11.75 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.3 sec) Final MSE 0.0
+
+ITERATION 10
+
+AI solved 31 out of 32 mazes in 12.64516129032258 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.2 sec) Final MSE 0.0
+
+ITERATION 11
+
+AI solved 29 out of 32 mazes in 13.03448275862069 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.2 sec) Final MSE 0.0
+
+ITERATION 12
+
+AI solved 30 out of 32 mazes in 14.2 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.3 sec) Final MSE 0.0
+
+ITERATION 13
+
+AI solved 30 out of 32 mazes in 12.033333333333333 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.3 sec) Final MSE 0.0
+
+ITERATION 14
+
+AI solved 31 out of 32 mazes in 11.741935483870968 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.3 sec) Final MSE 0.0
+
+ITERATION 15
+
+AI solved 30 out of 32 mazes in 11.833333333333334 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.3 sec) Final MSE 0.0
+
+ITERATION 16
+
+AI solved 30 out of 32 mazes in 12.6 avg steps
+Training AI 12 times, 25 max steps with explore rate 0.1
+Using learning rate 0.8, batch size 256, and 1 GD iters at each step
+(0.4 sec) Final MSE 0.0
+
+Goodbye.

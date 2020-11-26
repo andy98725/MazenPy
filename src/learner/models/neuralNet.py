@@ -6,7 +6,7 @@
 import numpy as np
 import random
 
-import learner.activations as acts
+import learner.models.activations as acts
 
 
 class NeuralNet:
@@ -67,7 +67,7 @@ class NeuralNet:
         self.weightDelta = None
     
     # Train on data in array
-    def backprop(self, dataArr, learningRate, iters):
+    def fit(self, dataArr, learningRate, iters):
         for _ in range(iters):
             self.__backpropInitialize()
             totalWeight = 0
@@ -78,9 +78,10 @@ class NeuralNet:
             self.__backpropFinalize(learningRate, totalWeight)
             
     # Train in batches on data in array
-    def stochasticTrain(self, dataArr, learningRate, iters, batchSize):
+    def stochasticFit(self, dataArr, learningRate, iters, batchSize):
+        batchSize = min(batchSize, len(dataArr))
         for _ in range(iters):
-            self.backprop(random.sample(dataArr, batchSize), learningRate, 1)
+            self.fit(random.sample(dataArr, batchSize), learningRate, 1)
             
     # Get squared error of data
     def error(self, data):

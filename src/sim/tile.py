@@ -1,8 +1,5 @@
 import random
 import pygame
-import numpy as np
-
-from sim import maze
 
 PX_SIZE = 32
 WALL_SIZE = 4
@@ -13,6 +10,8 @@ COL_START = (0, 255, 0)
 COL_END = (255, 0, 0)
 COL_PLAYER = (255, 255, 0)
 COL_WALL = (223, 223, 223)
+COL_SUCCESS = (0, 128, 0)
+COL_FAIL = (128, 0, 0)
 
 
 class Tile:
@@ -31,6 +30,8 @@ class Tile:
         self.distance = -1
         self.neighborCount = 0
         self.reward = -1
+        self.softSuccess = False
+        self.softFail = False
         
     # Similar to copy constructor
     def copy(self, tile):
@@ -42,7 +43,6 @@ class Tile:
         self.distance = tile.distance
         self.neighborCount = tile.neighborCount
         self.reward = tile.reward
-        
     
     def link(self, other):
         self.neighborCount += 1
@@ -64,6 +64,7 @@ class Tile:
     
     def isHallway(self):
         return self.neighborCount == 2
+
     def deadEnd(self):
         return not self.end and not self.start and self.neighborCount == 1
     
@@ -72,10 +73,14 @@ class Tile:
         
     # Display the background to screen
     def drawBG(self, screen, currentLoc=None):
-        if self.start:
-            bgcol = COL_START
-        elif self.end:
+        if self.end:
             bgcol = COL_END
+        elif self.softFail:
+            bgcol = COL_FAIL
+        elif self.softSuccess:
+            bgcol = COL_SUCCESS
+        elif self.start:
+            bgcol = COL_START
         elif currentLoc != None and currentLoc[0] == self.x and currentLoc[1] == self.y:
             bgcol = COL_PLAYER
         elif self.visited:
@@ -103,18 +108,19 @@ class Tile:
             pygame.draw.rect(screen, COL_WALL, (tlx + PX_SIZE - WALL_SIZE / 2, tly - WALL_SIZE / 2, WALL_SIZE, PX_SIZE + WALL_SIZE))
 
 # Copy existing maze layout
-def copyMap(tilemap):
+def copyMap(tilemap, randomizeStart):
     wid = len(tilemap)
     hei = len(tilemap[0])
-#     # Randomize start location
-#     startX = np.random.randint(wid)
-#     startY = np.random.randint(hei)
-#     if tilemap[startX][startY].end:
-#         startX = 0
-#         startY = 0
-    startX = 0
-    startY = 0
-    
+    if randomizeStart:
+        startX = np.random.randint(wid)
+        startY = np.random.randint(hei)
+        if tilemap[startX][startY].end:
+            startX = 0
+            startY = 0
+    else:
+        startX = 0
+        startY = 0
+     
     # Make fresh maze with randomized start
     newmap = [[None for _ in range(hei)] for _ in range(wid)]
     for i in range(wid):
@@ -123,6 +129,7 @@ def copyMap(tilemap):
             newmap[i][j].copy(tilemap[i][j])
             newmap[i][j].start = i == startX and j == startY
     return newmap
+
 
 # Generate maze
 def genMap(size):
@@ -142,7 +149,7 @@ def genMap(size):
         for tile in tileRow:
             tile.reward = 1 - (tile.distance / maxDist)
     
-    return tilemap
+    return tilemap, maxDist+1
 
 
 def DFS(size, tilemap, startLoc, endLoc, loc, prevTile=None):

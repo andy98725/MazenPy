@@ -26,12 +26,35 @@ class Maze:
         self.autoTraverseDelay = autoTraverseDelay
         self.maxTraversals = maxTraversals
         self.traversals = 0
+        self.visited = []
         self.allowBacktracking = allowBacktracking
         
-#         self.tiles = tile.genMap(self.size, allowBacktracking)
-        self.tiles = tile.copyMap(DEF_MAP)
+        self.tiles, self.longestPath = tile.genMap(self.size)
+#         self.tiles = tile.copyMap(DEF_MAP, randomizeStart=True)
         self.tilesFlat = flatten(self.tiles)
         
+        self.loc = self.startLoc()
+        self.traverseReady = True
+        
+    def reset(self, changeStart=True, startTile=None):
+        self.traverseReady = False
+        
+        self.traversals = 0
+        self.state = None
+        self.visited = []
+        for tile in self.tilesFlat:
+            tile.visited = False
+        
+        if changeStart:
+            for tile in self.tilesFlat:
+                tile.start = False
+                
+            if startTile != None:
+                startTile.start = True
+            else:  # randomized
+                index = np.random.randint(len(self.tilesFlat) - 1)
+                self.tilesFlat[index].start = True
+            
         self.loc = self.startLoc()
         self.traverseReady = True
     
@@ -77,6 +100,7 @@ class Maze:
         return dirs[0]
     
     def traverse(self, d, disp=None, recursive=False):
+        finished = self.isFinished()
         if not recursive:
             self.traversals += 1
         if not d in self.getCurrentDirections():
@@ -85,8 +109,8 @@ class Maze:
             return -1
         if not self.traverseReady:
             return -2
-        if self.isFinished():
-            return 0
+        if finished:
+            return -3
         self.state = 'valid'
         
         self.traverseReady = False
@@ -103,6 +127,9 @@ class Maze:
             raise Exception("Bad traversal call: d {}".format(d))
         
         prevTile.visited = not self.currentTile().visited
+        if prevTile not in self.visited:
+            self.visited.append(prevTile)
+        
         if disp != None:
             disp.update()
         
@@ -117,66 +144,87 @@ class Maze:
             self.traverseReady = True
             return 0
         
-    def getRandomDir(self):
-        dirs = self.getCurrentDirections()
-        np.random.shuffle(dirs)
-        return dirs[0]
-    
-    def getAIDir(self, model):
-#         # Find highest validated direction
-#         validDirs = self.getCurrentDirections()
-        # Find highest direction
-        e = model.eval(self.getNNState())
-        maxVal = -1
-        maxDir = 0
-        
-        for i in range(len(e)):
-            d = NNDIRS.get(i)
-#             if d in validDirs and e[i] > maxVal:
-            if e[i] > maxVal:
-                maxDir = d
-                maxVal = e[i]
-        return maxDir
-        
     def pilot(self, model, disp=None, pauseTime=0):
-        d = self.getAIDir(model)
+        
+        d = NNDIRS.get(np.argmax(model.eval(self.getState())))
 #         print(DIRNAMES.get(d))
         
-        # Delay
-        if pauseTime > 0:
-            time.sleep(pauseTime)
+        res = self.traverse(d, disp)
         
-        self.traverse(d, disp)
+        # Delay
+        if pauseTime > 0 and res >= 0:
+            time.sleep(pauseTime)
+            
+    def getSolveableStates(self, model):
+        solveStates = []
+        for x in range(self.size):
+            for y in range(self.size):
+                if self.tiles[x][y].end:
+                    continue
+                
+                self.reset(True, self.tiles[x][y])
+                while not self.isFinished():
+                    self.pilot(model)
+                
+                if self.success():
+                    solveStates.append((x, y))
+        return solveStates
+    
+    def clearModelSuccessStates(self):
+        for tile in self.tilesFlat:
+            tile.softSuccess = False
+            tile.softFail = False
+        
+    def evalModelSuccessStates(self, model, maxTraversals=64):
+        self.clearModelSuccessStates()
+        self.maxTraversals = maxTraversals
+        solvedStates = self.getSolveableStates(model)
+        
+        for x in range(self.size):
+            for y in range(self.size):
+                if self.tiles[x][y].end:
+                    continue
+                
+                if (x, y) in solvedStates:
+                    self.tiles[x][y].softSuccess = True
+                else:
+                    self.tiles[x][y].softFail = True
 
     # Get NNet input in np array format
-    def getNNState(self):
+    def getState(self):
         inp = []
         
-        for tile in self.tilesFlat:
-            if tile == self.currentTile():
-                inp.append(1)
-#             elif tile.visited:
-#                 inp.append(-1)
-            else:
-                inp.append(0)
+#         for tile in self.tilesFlat:
+#             if tile == self.currentTile():
+#                 inp.append(1)
+# #             elif tile.visited:
+# #                 inp.append(-1)
+#             else:
+#                 inp.append(0)
+        inp.append(self.currentTile().x)
+        inp.append(self.currentTile().y)
         
-        return inp
+        return tuple(inp)
     
     # Get reward for current state
     def getReward(self):
         if self.success():
             return 100.0
-        # Dead end
-        if self.currentTile().deadEnd():
-            return -100.0
+
+#         if self.currentTile().deadEnd():
+#             return -100.0
         # Illegal move
         if self.state == 'invalid':
-            return -0.5
-        # Backwards move
-        if self.currentTile().visited:
-            return -0.25
-        # Incentivize progres
-        return -0.04
+            return -1
+
+#         # Non-exploratory move        
+#         if self.exploredTile():
+#             return -0.25
+
+        return -0.1
+    
+    def exploredTile(self):
+        return self.currentTile() in self.visited
     
     def getDistance(self):
         return self.currentTile().distance

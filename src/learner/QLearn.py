@@ -2,18 +2,23 @@ import numpy as np
 import random
 import time
 
-from sim.maze import Maze, REVERSE_NNDIRS
+from sim.maze import NNDIRS
 
 
-def Test(model, mazeCount=32, maxIters=64):
+def eval(model, maze):
+    return np.argmax(model.eval(maze.getState()))
+
+
+def Test(model, maze, mazeCount=32, maxIters=64):
+    maze.maxTraversals = maxIters
+    
     totalSteps = 0
     totalSolved = 0
-    
     for _ in range(mazeCount):
-        maze = Maze(maxTraversals=maxIters)
+        maze.reset(True)
         
         while not maze.isFinished():
-            maze.traverse(maze.getAIDir(model))
+            maze.traverse(NNDIRS.get(eval(model, maze)))
         
         if maze.success():
             totalSteps += maze.traversals
@@ -22,57 +27,74 @@ def Test(model, mazeCount=32, maxIters=64):
     print("AI solved {} out of {} mazes in {} avg steps".format(totalSolved, mazeCount, totalSteps / totalSolved if totalSolved > 0 else "-"))
 
 
-def QLearn(model, mazeCount, maxIters, exploreRate, learningRate, learningIters):
-    print("Training AI on {} mazes, {} max steps with explore rate {}".format(mazeCount, maxIters, exploreRate))
-    print("Using learning rate {} and {} GD iters at each step".format(learningRate, learningIters))
+def QLearn(model, maze, **options):
+    mazeCount = options.get('iters', 12)
+    maxSteps = options.get('maxSteps', maze.longestPath)
+    exploreRate = options.get('exploration', 0.1)
     
-    memory = QLearnMem()
+    memSize = options.get('memSize', 16 * 16 * 8)
+    memDiscount = options.get('memDiscount', 0.1)
+    batchSize = options.get('batchSize', 256)
+    learnerRate = options.get('learningRate', 0.8)
+    learnerIters = options.get('batchIters', 1)
+    
+    print("Training AI {} times, {} max steps with explore rate {}".format(mazeCount, maxSteps, exploreRate))
+    print("Using learning rate {}, batch size {}, and {} GD iters at each step".format(learnerRate, batchSize, learnerIters))
+    
+    maze.maxTraversals = maxSteps
     startTime = time.time()
+    memory = QLearnMem(memSize, memDiscount)
     
     for i in range(mazeCount):
-        maze = Maze(maxTraversals=maxIters)
-        goodActs = 0
-        badActs = 0
+        maze.reset()
+        
+        exploreActs = 0
+        backtrackActs = 0
         invalidActs = 0
-        minDist = maze.currentTile().distance
-        prevDist = minDist
+        
+        initLoc = maze.loc
+        initDist = maze.currentTile().distance
         
         while not maze.isFinished():
             # Get action according to exploration rate
             if np.random.rand() < exploreRate:
-                act = maze.getRandomDir()
+                act = np.random.randint(4)
             else:
-                act = maze.getAIDir(model)
-            
+                act = eval(model, maze)
+
             # Get action information and progress state
-            curState = maze.getNNState()
-            maze.traverse(act)
-            nextState = maze.getNNState()
+            curState = maze.getState()
+            maze.traverse(NNDIRS.get(act))
+            nextState = maze.getState()
             reward = maze.getReward()
             
             # Track actions
-            newDist = maze.currentTile().distance
-            if newDist < minDist:
-                goodActs += 1
-                minDist = newDist
-            elif newDist == prevDist:
+            if maze.state == 'invalid':
                 invalidActs += 1
+            elif maze.exploredTile():
+                backtrackActs += 1
             else:
-                badActs += 1
-                
-            prevDist = newDist
+                exploreActs += 1
             
             # Store info in memory
-            memory.append(curState, REVERSE_NNDIRS.get(act), reward, nextState, maze.isFinished())
+            memory.append(curState, act, reward, nextState, maze.success() or maze.failure())
             
             # Learn from current memory state
-            model.backprop(memory.getTrainingData(model), learningRate, learningIters)
-        print("({} seconds) Maze {} finished with {} good, {} bad, {} invalid actions, {} tiles away".format(round(time.time() - startTime, 1), i + 1, goodActs, badActs, invalidActs, maze.getDistance()))
+#             model.stochasticFit(memory.getTrainingData(model), learnerRate, learnerIters, batchSize)
+            
+            model.fit(memory.getTrainingData(model), learnerRate, learnerIters)
+        
+#         mse = model.error(memory.getTrainingData(model))
+#         print("Iter {} | {} s | Finished with {} explore, {} backtrack, {} blocked actions".format(i + 1, round(time.time() - startTime, 1), exploreActs, backtrackActs, invalidActs))
+#         print("Started {} (dist {}), ended {} (dist {})".format(initLoc, initDist, maze.loc, maze.getDistance()))
+#         print("MSE {}".format(mse))
+    mse = model.error(memory.getTrainingData(model))
+    print("({} sec) Final MSE {}".format(round(time.time() - startTime, 1), mse))
 
 
 class QLearnMem:
 
-    def __init__(self, memSize=100, discount=1):
+    def __init__(self, memSize=10, discount=1):
         self.size = memSize
         self.discount = discount
         self.memory = []
